@@ -1,0 +1,23 @@
+{
+  "name": "cliscripts",
+  "version": "1.0.0",
+  "description": "Collection of scripts to carry out tasks with the Salesforce CLI",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keirbowden/cliscripts.git"
+  },
+  "author": "Keir Bowden",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/keirbowden/cliscripts/issues"
+  },
+  "homepage": "https://github.com/keirbowden/cliscripts#readme",
+  "dependencies": {
+    "commander": "^2.16.0",
+    "fs-extra": "^6.0.1"
+  }
+}
