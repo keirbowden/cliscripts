@@ -1,6 +1,6 @@
 {
   "name": "cliscripts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Collection of scripts to carry out tasks with the Salesforce CLI",
   "main": "index.js",
   "scripts": {
