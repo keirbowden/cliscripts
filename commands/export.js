@@ -6,104 +6,7 @@
 var path = require("path");
 var fse = require('fs-extra');
 var child_process = require('child_process');
-
-/*
- * Names of the metadata to retrieve
- */
-const allMetadata=[
-    "AccountSettings",
-    "ActivitiesSettings",
-    "AddressSettings",
-    "AnalyticSnapshot",
-    "ApexClass",
-    "ApexComponent",
-    "ApexPage",
-    "ApexTrigger",
-    "ApprovalProcess",
-    "AssignmentRules",
-    "AuraDefinitionBundle",
-    "AuthProvider",
-    "AutoResponseRules",
-    "BusinessHoursSettings",
-    "BusinessProcess",
-    "CallCenter",
-    "CaseSettings",
-    "ChatterAnswersSettings",
-    "CompanySettings",
-    "Community",
-    "CompactLayout",
-    "ConnectedApp",
-    "ContractSettings",
-    "CustomApplication",
-    "CustomApplicationComponent",
-    "CustomField",
-    "CustomLabels",
-    "CustomMetadata",
-    "CustomObject",
-    "CustomObjectTranslation",
-    "CustomPageWebLink",
-    "CustomPermission",
-    "CustomSite",
-    "CustomTab",
-    "DataCategoryGroup",
-    "Dashboard",
-    "DuplicateRule",
-    "EmailTemplate",
-    "EntitlementProcess",
-    "EntitlementSettings",
-    "EntitlementTemplate",
-    "ExternalDataSource",
-    "FieldSet",
-    "Flow",
-    "FlowDefinition",
-    "Folder",
-    "ForecastingSettings",
-    "Group",
-    "HomePageComponent",
-    "HomePageLayout",
-    "IdeasSettings",
-    "KnowledgeSettings",
-    "Layout",
-    "Letterhead",
-    "ListView",
-    "LiveAgentSettings",
-    "LiveChatAgentConfig",
-    "LiveChatButton",
-    "LiveChatDeployment",
-    "MatchingRules",
-    "MilestoneType",
-    "MobileSettings",
-    "NamedFilter",
-    "Network",
-    "OpportunitySettings",
-    "PermissionSet",
-    "Portal",
-    "PostTemplate",
-    "ProductSettings",
-    "Profile",
-    "ProfileSessionSetting",
-    "Queue",
-    "QuickAction",
-    "QuoteSettings",
-    "RecordType",
-    "RemoteSiteSetting",
-    "ReportType",
-    "Report",
-    "Role",
-    "SamlSsoConfig",
-    "Scontrol",
-    "SecuritySettings",
-    "SharingReason",
-    "SharingCriteriaRule",
-    "SharingOwnerRule",
-    "SharingTerritoryRule",
-    "Skill",
-    "StaticResource",
-    "Territory",
-    "Translations",
-    "ValidationRule",
-    "Workflow"
-];
+var allMetadataNames=new Array();
 
 function ExportCommand(opts) {
     this.options = opts;
@@ -127,10 +30,11 @@ function ExportCommand(opts) {
 ExportCommand.prototype.execute = function () {
     console.log('Exporting metadata');
     this.getFolderMetadata();
+    this.getAllMetadata();
     var standardObjects=this.getStandardObjects();
     this.startPackage(); 
-    for (var idx=0; idx<allMetadata.length; idx++) {
-        var mdName=allMetadata[idx];
+    for (var idx=0; idx<allMetadataNames.length; idx++) {
+        var mdName=allMetadataNames[idx];
         this.startTypeInPackage();
         switch(mdName) {
             case 'Dashboard':
@@ -159,15 +63,15 @@ ExportCommand.prototype.execute = function () {
                     }
                 }
                 break;
-            case 'Report':
-                var repFolders=this.foldersByType['Report'];
-                for (var folderId in repFolders) {
-                    if (repFolders.hasOwnProperty(folderId)) {
-                        var folder=repFolders[folderId];
+            case 'Document':
+                var docFolders=this.foldersByType['Document'];
+                for (var folderId in docFolders) {
+                    if (docFolders.hasOwnProperty(folderId)) {
+                        var folder=docFolders[folderId];
                         this.addPackageMember(folder.Name);
-                        for (var repIdx=0; repIdx<folder.members.length; repIdx++) {
-                            var report=folder.members[repIdx];
-                            this.addPackageMember(folder.Name + '/' + report.DeveloperName);
+                        for (var docIdx=0; docIdx<folder.members.length; docIdx++) {
+                            var Document=folder.members[docIdx];
+                            this.addPackageMember(folder.Name + '/' + Document.DeveloperName);
                         }
                     }
                 }
@@ -193,6 +97,8 @@ ExportCommand.prototype.execute = function () {
     
     console.log('Metadata written to ' + path.join(this.options.directory, 'unpackaged.zip'));
 }
+
+
 
 /*
  * Extract standard object names as these need to be explicitly named
@@ -231,9 +137,10 @@ ExportCommand.prototype.startPackage=function() {
 
 ExportCommand.prototype.endPackage=function() {
     fse.appendFileSync(this.packageFilePath,
-         '  <version>43.0</version>\n' +
+         '  <version>46.0</version>\n' +
          '</Package>\n');
 }
+
 ExportCommand.prototype.addPackageMember = function(member) {
     fse.appendFileSync(this.packageFilePath, '    <members>' + member + '</members>\n');
 }
@@ -253,6 +160,7 @@ ExportCommand.prototype.getFolderMetadata = function() {
     this.getReports(); 
     this.getDashboards(); 
     this.getEmailTemplates(); 
+    this.getDocuments();
 }
 
 ExportCommand.prototype.buildFolderStructure = function() {
@@ -266,7 +174,8 @@ ExportCommand.prototype.buildFolderStructure = function() {
     let folders=JSON.parse(foldersJSON);
     this.foldersByType={'Dashboard':{},
                        'Report':{}, 
-                       'Email':{}}
+                       'Email':{},
+                       'Document':{}}
 
     for (var idx=0; idx<folders.result.records.length; idx++) {
         var folder=folders.result.records[idx];
@@ -319,6 +228,26 @@ ExportCommand.prototype.getDashboards = function() {
     }
 }
 
+ExportCommand.prototype.getDocuments = function() {
+    let query="Select Id, DeveloperName, FolderId from Document";
+    let documentsJSON=child_process.execFileSync('sfdx', 
+        ['force:data:soql:query',
+            '-q', query, 
+            '-u', this.options.sfdxUser,
+            '--json']);
+
+    let documents=JSON.parse(documentsJSON);
+
+    for (var idx=0; idx<documents.result.records.length; idx++) {
+        var document=documents.result.records[idx];
+        var foldersForDocuments=this.foldersByType['Document'];
+        var folderForThisDocument=foldersForDocuments[document.FolderId];
+        if (folderForThisDocument) {
+            folderForThisDocument.members.push(document);
+        }
+    }
+}
+
 ExportCommand.prototype.getEmailTemplates = function() {
     let query="Select Id, DeveloperName, FolderId from EmailTemplate";
     let templateJSON=child_process.execFileSync('sfdx', 
@@ -336,6 +265,22 @@ ExportCommand.prototype.getEmailTemplates = function() {
         if (folderForThisTemplate) {
             folderForThisTemplate.members.push(template);
         }
+    }
+}
+
+/*
+ * Extract all metadata objects names in the org
+ */
+ExportCommand.prototype.getAllMetadata=function() {
+    let metataDataJSON=child_process.execFileSync('sfdx', 
+    ['force:mdapi:describemetadata', 
+        '-u', this.options.sfdxUser, 
+        '--json']);
+
+    let metadatas=JSON.parse(metataDataJSON);
+
+    for (var idx=0; idx<metadatas.result.metadataObjects.length; idx++) {
+        allMetadataNames.push(metadatas.result.metadataObjects[idx].xmlName);
     }
 }
 
