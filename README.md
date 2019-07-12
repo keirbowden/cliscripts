@@ -1,4 +1,6 @@
-# Forked from Bob Buzzard's Salesforce CLI Samples
+# Bob Buzzard's Salesforce CLI Samples
+
+With contributions from [oriolete](https://github.com/oriolete)
 
 ## Getting started
 Clone the repository and cd into the directory created.
