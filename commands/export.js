@@ -19,8 +19,9 @@ function ExportCommand(opts) {
 	} catch (e) {
         fse.mkdirsSync(this.options.directory);
     }
-    
-    this.packageFilePath=path.join(this.options.directory, 'package.xml');
+     
+    this.packageFilePath=path.join(this.options.directory, 'package.xml');;
+    console.log(this.packageFilePath);
     if (!this.options.sfdxUser) {
         console.log('Missing -u (--username) parameter');
         process.exit(1);
@@ -89,11 +90,8 @@ ExportCommand.prototype.execute = function () {
     this.endPackage();
 
     console.log('Extracting metadata');
-    child_process.execFileSync('sfdx', 
-                    ['force:mdapi:retrieve', 
-                        '-u', this.options.sfdxUser, 
-                        '-r', this.options.directory, 
-                        '-k', this.packageFilePath]);
+    let command = 'sfdx force:mdapi:retrieve -r '+ this.options.directory +' -u ' + this.options.sfdxUser+ ' -k '+ this.packageFilePath+' --json'
+    child_process.execSync(command);
     
     console.log('Metadata written to ' + path.join(this.options.directory, 'unpackaged.zip'));
 }
@@ -104,20 +102,21 @@ ExportCommand.prototype.execute = function () {
  * Extract standard object names as these need to be explicitly named
  * when retrieving
  */
+
+
+
 ExportCommand.prototype.getStandardObjects=function() {
-    var standardObjectsObj=child_process.execFileSync('sfdx', 
-                    ['force:schema:sobject:list', 
-                        '-u', this.options.sfdxUser, 
-                        '-c', 'standard']);
+    let command = 'sfdx force:schema:sobject:list -c standard -u ' + this.options.sfdxUser+ ' --json'
+    let standardObjectsObj = child_process.execSync(command);
 
     var standardObjectsString=standardObjectsObj.toString();
     standardObjects=standardObjectsString.split('\n');
 
     for (var idx=standardObjects.length-1; idx>=0; idx--) {
-    if ( (standardObjects[idx].endsWith('__Tag')) ||
-         (standardObjects[idx].endsWith('__History')) ||
-         (standardObjects[idx].endsWith('__Tags')) ) {
-        standardObjects.splice(idx, 1);
+        if ( (standardObjects[idx].endsWith('__Tag')) ||
+            (standardObjects[idx].endsWith('__History')) ||
+            (standardObjects[idx].endsWith('__Tags')) ) {
+            standardObjects.splice(idx, 1);
         }
     }
 
@@ -164,12 +163,8 @@ ExportCommand.prototype.getFolderMetadata = function() {
 }
 
 ExportCommand.prototype.buildFolderStructure = function() {
-    let query="Select Id, Name, DeveloperName, Type, NamespacePrefix from Folder where DeveloperName!=null";
-    let foldersJSON=child_process.execFileSync('sfdx', 
-        ['force:data:soql:query',
-            '-q', query, 
-            '-u', this.options.sfdxUser,
-            '--json']);
+    let command = 'sfdx force:data:soql:query -q \"Select Id, Name, DeveloperName, Type, NamespacePrefix from Folder where DeveloperName!=null\" -u ' + this.options.sfdxUser+ ' --json'
+    let foldersJSON = child_process.execSync(command);
 
     let folders=JSON.parse(foldersJSON);
     this.foldersByType={'Dashboard':{},
@@ -179,8 +174,11 @@ ExportCommand.prototype.buildFolderStructure = function() {
 
     for (var idx=0; idx<folders.result.records.length; idx++) {
         var folder=folders.result.records[idx];
+
         var foldersForType=this.foldersByType[folder.Type];
+
         if (foldersForType) {
+
             if (!foldersForType[folder.Id]) {
                 foldersForType[folder.Id]={'Name': folder.DeveloperName, 'members': []};
             }
@@ -189,12 +187,9 @@ ExportCommand.prototype.buildFolderStructure = function() {
 }
 
 ExportCommand.prototype.getReports = function() {
-    let query="Select Id, DeveloperName, OwnerId from Report";
-    let reportsJSON=child_process.execFileSync('sfdx', 
-        ['force:data:soql:query',
-            '-q', query, 
-            '-u', this.options.sfdxUser,
-            '--json']);
+
+    let command = 'sfdx force:data:soql:query -q \"Select Id, DeveloperName, OwnerId from Report\" -u ' + this.options.sfdxUser+ ' --json'
+    let reportsJSON=child_process.execSync(command);        
 
     let reports=JSON.parse(reportsJSON);
 
@@ -209,12 +204,8 @@ ExportCommand.prototype.getReports = function() {
 }
 
 ExportCommand.prototype.getDashboards = function() {
-    let query="Select Id, DeveloperName, FolderId from Dashboard";
-    let dashboardsJSON=child_process.execFileSync('sfdx', 
-        ['force:data:soql:query',
-            '-q', query, 
-            '-u', this.options.sfdxUser,
-            '--json']);
+    let command = 'sfdx force:data:soql:query -q \"Select Id, DeveloperName from Dashboard\" -u ' + this.options.sfdxUser+ ' --json'
+    let dashboardsJSON=child_process.execSync(command);       
 
     let dashboards=JSON.parse(dashboardsJSON);
 
@@ -229,12 +220,8 @@ ExportCommand.prototype.getDashboards = function() {
 }
 
 ExportCommand.prototype.getDocuments = function() {
-    let query="Select Id, DeveloperName, FolderId from Document";
-    let documentsJSON=child_process.execFileSync('sfdx', 
-        ['force:data:soql:query',
-            '-q', query, 
-            '-u', this.options.sfdxUser,
-            '--json']);
+    let command = 'sfdx force:data:soql:query -q \"Select Id, DeveloperName  from Document\" -u ' + this.options.sfdxUser+ ' --json'
+    let documentsJSON=child_process.execSync(command);   
 
     let documents=JSON.parse(documentsJSON);
 
@@ -249,13 +236,11 @@ ExportCommand.prototype.getDocuments = function() {
 }
 
 ExportCommand.prototype.getEmailTemplates = function() {
-    let query="Select Id, DeveloperName, FolderId from EmailTemplate";
-    let templateJSON=child_process.execFileSync('sfdx', 
-        ['force:data:soql:query',
-            '-q', query, 
-            '-u', this.options.sfdxUser,
-            '--json']);
 
+    let command = 'sfdx force:data:soql:query -q \"Select Id, DeveloperName from EmailTemplate\" -u ' + this.options.sfdxUser+ ' --json'
+    let templateJSON=child_process.execSync(command);  
+
+    
     let templates=JSON.parse(templateJSON);
 
     for (var idx=0; idx<templates.result.records.length; idx++) {
@@ -268,15 +253,18 @@ ExportCommand.prototype.getEmailTemplates = function() {
     }
 }
 
+
+
+
+
+
 /*
  * Extract all metadata objects names in the org
  */
 ExportCommand.prototype.getAllMetadata=function() {
-    let metataDataJSON=child_process.execFileSync('sfdx', 
-    ['force:mdapi:describemetadata', 
-        '-u', this.options.sfdxUser, 
-        '--json']);
-
+    
+    let command = 'sfdx force:mdapi:describemetadata -u ' + this.options.sfdxUser+ ' --json'
+    let metataDataJSON=child_process.execSync(command);  
     let metadatas=JSON.parse(metataDataJSON);
 
     for (var idx=0; idx<metadatas.result.metadataObjects.length; idx++) {
